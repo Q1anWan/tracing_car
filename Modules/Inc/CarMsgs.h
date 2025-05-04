@@ -37,6 +37,10 @@ struct Msg_Motor_Ctr_t {
     float torque[2];
 };
 
+struct Msg_Motor_Fdb_t {
+    float vel[2];
+};
+
 struct Msg_Odometer_t {
     float x;
     float v;

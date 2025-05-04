@@ -39,7 +39,10 @@ add_executable(${CMAKE_PROJECT_NAME})
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
-add_subdirectory(OneMessage om)
+
+add_subdirectory(OneMessage-4.3/src om.out)
+target_compile_options(OneMessage PUBLIC -w)
+target_include_directories(OneMessage PUBLIC $<TARGET_PROPERTY:stm32cubemx,INTERFACE_INCLUDE_DIRECTORIES>)
 
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
@@ -48,18 +51,16 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 
 file(GLOB TASKS_SRC_FILES ${PROJECT_SOURCE_DIR}/Tasks/Src/*)
 file(GLOB MODULES_SRC_FILES ${PROJECT_SOURCE_DIR}/Modules/Src/*)
-#file(GLOB OM_SRC_FILES ${PROJECT_SOURCE_DIR}/OneMessage/*.c
-#        ${CMAKE_CURRENT_SOURCE_DIR}/OneMessage/app/*.c
-#        ${CMAKE_CURRENT_SOURCE_DIR}/OneMessage/core/*.c
-#        ${CMAKE_CURRENT_SOURCE_DIR}/OneMessage/comp/*.c)
+
 
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     ${TASKS_SRC_FILES}
     ${MODULES_SRC_FILES}
-#    ${OM_SRC_FILES}
+
 )
+
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC
@@ -68,11 +69,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC
     Modules/Inc
     DSP/Include
     DSP/Include/dsp
-    $<TARGET_PROPERTY:OneMessage,INCLUDE_DIRECTORIES>
-#    OneMessage
-#    OneMessage/app
-#    OneMessage/core
-#    OneMessage/comp
+    PUBLIC $<TARGET_PROPERTY:OneMessage,INTERFACE_INCLUDE_DIRECTORIES>
 )
 
 # Add project symbols (macros)

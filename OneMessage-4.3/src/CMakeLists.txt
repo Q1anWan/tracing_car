@@ -1,11 +1,10 @@
-cmake_minimum_required(VERSION 3.27)
+cmake_minimum_required(VERSION 3.11)
 project(OneMessage)
 
 file(
   GLOB ${PROJECT_NAME}_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/*.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/app/*.c" "${CMAKE_CURRENT_SOURCE_DIR}/core/*.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/comp/*.c")
-
 
 add_library(${PROJECT_NAME} STATIC)
 
@@ -16,4 +15,5 @@ target_include_directories(
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/app
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/core
-  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/comp)
+  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/comp
+  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../config)

@@ -33,7 +33,7 @@ SRAM_SET_RAM_D3 float remoter_value[4];
     UNUSED(initial_input);
 
     /* Remoter Topic */
-    om_topic_t *remoter_topic = om_config_topic(nullptr, "CA", "REMOTER", sizeof(Msg_Remoter_t));
+    om_topic_t *remoter_topic = om_find_topic("REMOTER", UINT32_MAX);
     // om_topic_t *status_topic = om_find_topic("STATUS", UINT32_MAX);
     Msg_Remoter_t msg_remoter{};
     Msg_Thread_Status_t status_msg{};

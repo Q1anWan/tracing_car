@@ -1,6 +1,8 @@
 #include "main.h"
 #include "app_threadx.h"
 #include "om.h"
+#include "CarMsgs.h"
+
 TX_THREAD my_thread;
 TX_THREAD my_thread2;
 uint8_t my_thread_stack[1024];
@@ -17,6 +19,11 @@ extern uint8_t RemoterThreadStack[2048];
 extern TX_SEMAPHORE RemoterThreadSem;
 
 extern void RemoterThreadFun(ULONG initial_input);
+
+
+extern TX_THREAD MotorThread;
+extern uint8_t MotorThreadStack[3072];
+extern void MotorThreadFun(ULONG initial_input);
 
 void my_thread_entry(ULONG thread_input) {
     /* Enter into a forever loop. */
@@ -47,6 +54,7 @@ extern "C" void myapp_start() {
             Msg_PoolBuf,
             sizeof(Msg_PoolBuf));
     om_init();
+    om_config_topic(nullptr, "CA", "REMOTER", sizeof(Msg_Remoter_t));
 
     tx_semaphore_create(&my_sem, "My Semaphore", 0);
     tx_semaphore_create(&RemoterThreadSem, "RemoterSemaphore", 0);
@@ -62,6 +70,10 @@ extern "C" void myapp_start() {
 
     tx_thread_create(&RemoterThread, "Remoter",
                  RemoterThreadFun, 0x0000, RemoterThreadStack, sizeof(RemoterThreadStack),
+                 2, 2, TX_NO_TIME_SLICE, TX_AUTO_START);
+
+    tx_thread_create(&MotorThread, "Motor",
+                 MotorThreadFun, 0x0000, MotorThreadStack, sizeof(MotorThreadStack),
                  2, 2, TX_NO_TIME_SLICE, TX_AUTO_START);
 
 }

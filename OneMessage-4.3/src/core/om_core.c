@@ -6,14 +6,14 @@ RBT_ROOT(_topic_list);
 static om_mutex_t core_lock;
 
 om_status_t om_core_init() {
-  om_mutex_init(&core_lock,(char*)"core_lock_mutex");
+  om_mutex_init(&core_lock, "om_core_mutex");
   om_mutex_unlock(&core_lock);
   om_generate_crc32_table();
   om_generate_crc8_table();
   return OM_OK;
 }
 
-om_topic_t* om_core_topic_create(const char* name, uint32_t buff_len) {
+om_topic_t*om_core_topic_create(const char* name, uint32_t buff_len) {
   om_topic_t* topic = om_malloc(sizeof(om_topic_t));
 
   return om_core_topic_create_static(topic, name, buff_len);
@@ -33,7 +33,7 @@ om_topic_t* om_core_topic_create_static(om_topic_t* topic, const char* name,
   OM_INIT_LIST_HEAD(&topic->suber);
   OM_INIT_LIST_HEAD(&topic->link);
 
-  om_mutex_init(&topic->mutex,(char*)name);
+  om_mutex_init(&topic->mutex, name);
   om_mutex_unlock(&topic->mutex);
 
   return topic;
