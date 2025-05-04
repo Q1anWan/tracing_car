@@ -78,8 +78,10 @@ void Error_Handler(void);
 #define SPI2_CS1_GPIO_Port GPIOC
 #define IMU_INT1_Pin LL_GPIO_PIN_10
 #define IMU_INT1_GPIO_Port GPIOE
+#define IMU_INT1_EXTI_IRQn EXTI15_10_IRQn
 #define IMU_INT3_Pin LL_GPIO_PIN_12
 #define IMU_INT3_GPIO_Port GPIOE
+#define IMU_INT3_EXTI_IRQn EXTI15_10_IRQn
 #define EN5V_Pin LL_GPIO_PIN_15
 #define EN5V_GPIO_Port GPIOA
 

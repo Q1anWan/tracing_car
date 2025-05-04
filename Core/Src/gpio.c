@@ -122,6 +122,9 @@ void MX_GPIO_Init(void)
   /**/
   LL_GPIO_SetPinMode(IMU_INT3_GPIO_Port, IMU_INT3_Pin, LL_GPIO_MODE_INPUT);
 
+  /* EXTI interrupt init*/
+  NVIC_SetPriority(EXTI15_10_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
+
 }
 
 /* USER CODE BEGIN 2 */

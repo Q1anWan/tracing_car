@@ -91,13 +91,13 @@ Msg_Remoter_t rmt_msg;
 
         om_suber_export(rm_suber, &rmt_msg, false);
 
-        int16_t vx = rmt_msg.ch_1*300;
-        int16_t vy = rmt_msg.ch_0*300;
+        int16_t vx = rmt_msg.ch_1*1000;
+        int16_t vy = rmt_msg.ch_0*1000;
 
         zdt[0].TorqueControl(tx_header2_0.Identifier, tx_header2_0.DataLength, can_data2_0,
-                      1000,vx+vy);
+                      65535,vx+vy);
         zdt[1].TorqueControl(tx_header2_1.Identifier, tx_header2_1.DataLength, can_data2_1,
-                      1000,-vx+vy);
+                      65535,-vx+vy);
 
         HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &tx_header2_0, can_data2_0);
         HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan2, &tx_header2_1, can_data2_1);
