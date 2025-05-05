@@ -31,9 +31,17 @@ extern uint8_t MotorThreadStack[3072];
 extern void MotorThreadFun(ULONG initial_input);
 
 extern TX_THREAD IMUThread;
-extern uint8_t IMUThreadStack[8192];
+extern uint8_t IMUThreadStack[4096];
 
 extern void IMUThreadFun(ULONG initial_input);
+
+extern TX_THREAD IMUTemThread;
+extern uint8_t IMUTemThreadStack[1024];
+extern void IMUTemThreadFun(ULONG initial_input);
+
+extern TX_THREAD LQRThread;
+extern uint8_t LQRThreadStack[4096];
+extern void LQRThreadFun(ULONG initial_input);
 
 void my_thread_entry(ULONG thread_input) {
     /* Enter into a forever loop. */
@@ -65,7 +73,8 @@ extern "C" void myapp_start() {
     om_init();
     om_config_topic(nullptr, "CA", "REMOTER", sizeof(Msg_Remoter_t));
     om_config_topic(nullptr, "CA", "INS", sizeof(Msg_INS_t));
-
+    om_config_topic(nullptr, "CA", "MOTOR_FDB", sizeof(Msg_Motor_Fdb_t));
+    om_config_topic(nullptr, "CA", "MOTOR_CTL", sizeof(Msg_Motor_Ctr_t));
     tx_byte_pool_create(
         &MathPool,
         (CHAR *) "Math_Pool",
@@ -85,14 +94,20 @@ extern "C" void myapp_start() {
     //                  my_thread_entry2, 0x1234, my_thread_stack2, sizeof(my_thread_stack2),
     //                  3, 3, TX_NO_TIME_SLICE, TX_AUTO_START);
 
-    // tx_thread_create(&RemoterThread, "Remoter",
-    //                  RemoterThreadFun, 0x0000, RemoterThreadStack, sizeof(RemoterThreadStack),
-    //                  2, 2, TX_NO_TIME_SLICE, TX_AUTO_START);
-    //
-    // tx_thread_create(&MotorThread, "Motor",
-    //                  MotorThreadFun, 0x0000, MotorThreadStack, sizeof(MotorThreadStack),
-    //                  2, 2, TX_NO_TIME_SLICE, TX_AUTO_START);
+    tx_thread_create(&RemoterThread, "Remoter",
+                     RemoterThreadFun, 0x0000, RemoterThreadStack, sizeof(RemoterThreadStack),
+                     2, 2, TX_NO_TIME_SLICE, TX_AUTO_START);
+
+    tx_thread_create(&MotorThread, "Motor",
+                     MotorThreadFun, 0x0000, MotorThreadStack, sizeof(MotorThreadStack),
+                     2, 2, TX_NO_TIME_SLICE, TX_AUTO_START);
 
     tx_thread_create(&IMUThread, "IMU", IMUThreadFun, 0x0000, IMUThreadStack, sizeof(IMUThreadStack), 2, 2,
+                     TX_NO_TIME_SLICE, TX_AUTO_START);
+
+    tx_thread_create(&IMUTemThread, "IMU_Temp", IMUTemThreadFun, 0x0000, IMUTemThreadStack, sizeof(IMUTemThreadStack), 4, 4,
+                     TX_NO_TIME_SLICE, TX_AUTO_START);
+
+    tx_thread_create(&LQRThread,"LQR", LQRThreadFun, 0x0000, LQRThreadStack, sizeof(LQRThreadStack), 3, 3,
                      TX_NO_TIME_SLICE, TX_AUTO_START);
 }

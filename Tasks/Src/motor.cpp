@@ -11,6 +11,8 @@
 #include "fdcan.h"
 #include "om.h"
 #include "tx_api.h"
+#include "core.h"
+#include "arm_math.h"
 extern FDCAN_HandleTypeDef hfdcan1;
 extern FDCAN_HandleTypeDef hfdcan2;
 
@@ -46,14 +48,20 @@ uint8_t fdb_22;
 float v2;
 Msg_Remoter_t rmt_msg;
 
+#define K_CURRENT 10000.0f
 /*Close-loop control Motors*/
 
 [[noreturn]] void MotorThreadFun(ULONG initial_input) {
     /*Creat Wheel Topic*/
-    om_suber_t *rm_suber = om_subscribe(om_find_topic("REMOTER", UINT32_MAX));
+    om_suber_t *wheel_ctl_suber = om_subscribe(om_find_topic("MOTOR_CTL", UINT32_MAX));
+    om_topic_t *wheel_fdb = om_find_topic("MOTOR_FDB", UINT32_MAX);
     //
     // Msg_Motor_Ctr_t msg_zdt{};
     // uint8_t zdt_enable_last[4] = {0, 0};
+    Msg_Motor_Fdb_t wheel_fdb_data{};
+    Msg_Motor_Ctr_t wheel_ctr_data{};
+    wheel_ctr_data.torque[0]=0;
+    wheel_ctr_data.torque[1]=0;
 
     zdt[0].SetID(1); //FDCAN 1
     zdt[1].SetID(1); //FDCAN 2
@@ -89,15 +97,29 @@ Msg_Remoter_t rmt_msg;
 
     for (;;) {
 
-        om_suber_export(rm_suber, &rmt_msg, false);
+        om_suber_export(wheel_ctl_suber, &wheel_ctr_data, false);
 
-        int16_t vx = rmt_msg.ch_1*1000;
-        int16_t vy = rmt_msg.ch_0*1000;
+        int16_t current[2];
+
+        current[0] = static_cast<int16_t>((wheel_ctr_data.torque[0] * K_CURRENT));
+        current[1] = static_cast<int16_t>((wheel_ctr_data.torque[1] * K_CURRENT));
+
+        if (current[0]>4000) {
+            current[0] = 4000;
+        } else if (current[0]<-4000) {
+            current[0] = -4000;
+        }
+        if (current[1]>4000) {
+            current[1] = 4000;
+        } else if (current[1]<-4000) {
+            current[1] = -4000;
+        }
+
 
         zdt[0].TorqueControl(tx_header2_0.Identifier, tx_header2_0.DataLength, can_data2_0,
-                      65535,vx+vy);
+                      65535,current[0]);
         zdt[1].TorqueControl(tx_header2_1.Identifier, tx_header2_1.DataLength, can_data2_1,
-                      65535,-vx+vy);
+                      65535,current[1]);
 
         HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &tx_header2_0, can_data2_0);
         HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan2, &tx_header2_1, can_data2_1);
@@ -118,7 +140,10 @@ Msg_Remoter_t rmt_msg;
 
         v1 = zdt[0].GetVelocity();
         v2 = zdt[1].GetVelocity();
+        wheel_fdb_data.vel[0] = zdt[0].GetVelocity()*2*PI*WHEEL_R/60.0f;
+        wheel_fdb_data.vel[1] = zdt[1].GetVelocity()*2*PI*WHEEL_R/60.0f;
 
+        om_publish(wheel_fdb, &wheel_fdb_data, sizeof(wheel_fdb_data), false, false);
         tx_thread_sleep(1);
     }
 }

@@ -6,6 +6,7 @@
 
 #include "libspi-i-hal-1.0.hpp"
 #include "libbmi088-1.0.hpp"
+#include "libpid-i-2.1.hpp"
 
 #include "om.h"
 #include "CarMsgs.h"
@@ -14,6 +15,9 @@
 #include "QuaternionEKF.h"
 
 #include "core.h"
+#include "CRC.h"
+#include "Flash.hpp"
+#include "adc.h"
 
 using namespace SPI;
 using namespace BMI088;
@@ -25,7 +29,7 @@ uint8_t BMI088_Config(cBMI088 &bmi088);
 static cIMUA *imu_handle = nullptr;
 
 TX_THREAD IMUThread;
-uint8_t IMUThreadStack[8192] = {0};
+uint8_t IMUThreadStack[4096] = {0};
 
 __PACKED_STRUCT imu_cal_t {
     float gyro[3];
@@ -34,7 +38,7 @@ __PACKED_STRUCT imu_cal_t {
 };
 
 float YAW_T;
-float GRAVITY_FIXED = 9.8f;
+float GRAVITY_FIXED = 9.7887f;
 Msg_INS_t msg_ins{};
 
 [[noreturn]] void IMUThreadFun(ULONG initial_input) {
@@ -56,18 +60,21 @@ Msg_INS_t msg_ins{};
     // Msg_INS_t msg_ins{};
     imu_cal_t imu_cal{};
 
-    // Flash::cFlashCore::flash_memcpy((uint8_t *) &imu_cal, (uint8_t *) FLASH_STORAGE_BASE_ADDRESS, sizeof(imu_cal_t));
-    // if (imu_cal.crc == cal_crc8_table((uint8_t *) &imu_cal, sizeof(imu_cal_t) - 1)) {
-    //     gyro_offset[0] = imu_cal.gyro[0];
-    //     gyro_offset[1] = imu_cal.gyro[1];
-    //     gyro_offset[2] = imu_cal.gyro[2];
-    //     GRAVITY_FIXED = GRAVITY_RAW * imu_cal.accel_k;
-    // } else {
+    Flash::cFlashCore::flash_memcpy((uint8_t *) &imu_cal, (uint8_t *) FLASH_STORAGE_BASE_ADDRESS, sizeof(imu_cal_t));
+    if (imu_cal.crc == CRC8Maxim((uint8_t *) &imu_cal, sizeof(imu_cal_t) - 1)) {
+        gyro_offset[0] = imu_cal.gyro[0];
+        gyro_offset[1] = imu_cal.gyro[1];
+        gyro_offset[2] = imu_cal.gyro[2];
+    } else {
         gyro_offset[0] = 0.0f;
         gyro_offset[1] = 0.0f;
         gyro_offset[2] = 0.0f;
+        imu_cal.gyro[0] = 0.0f;
+        imu_cal.gyro[1] = 0.0f;
+        imu_cal.gyro[2] = 0.0f;
         imu_cal.accel_k = 1.0f;
-    // }
+    }
+    GRAVITY_FIXED = GRAVITY_FIXED * imu_cal.accel_k;
 
     cSPI spi_accel(&hspi2, SPI2_CS0_GPIO_Port, SPI2_CS0_Pin, UINT32_MAX);
     cSPI spi_gyro(&hspi2, SPI2_CS1_GPIO_Port, SPI2_CS1_Pin, UINT32_MAX);
@@ -82,76 +89,76 @@ Msg_INS_t msg_ins{};
     NVIC_EnableIRQ(EXTI15_10_IRQn);
 
     tx_thread_sleep(120);
-    // if (!LL_GPIO_IsInputPinSet(KEY_GPIO_Port, KEY_Pin)) {
-    //     if (!LL_TIM_IsEnabledCounter(TIM12)) {
-    //         LL_TIM_CC_EnableChannel(TIM12, LL_TIM_CHANNEL_CH2);
-    //         LL_TIM_EnableAllOutputs(TIM12);
-    //         LL_TIM_EnableCounter(TIM12);
-    //     }
-    //
-    //     uint16_t cnt[2];
-    //     cnt[0] = 19;
-    //     cnt[1] = 0;
-    //     LL_TIM_OC_SetCompareCH2(TIM12, cnt[0]);
-    //     tx_thread_sleep(300);
-    //     LL_TIM_OC_SetCompareCH2(TIM12, 0);
-    //
-    //     //Wait for IMU Heat
-    //     while (bmi088.GetTem() < 49.0f) {
-    //         tx_thread_sleep(100);
-    //     }
-    //     tx_thread_sleep(5000);
-    //
-    //     //Pre-set
-    //     gyro_offset[0] = 0.0f;
-    //     gyro_offset[1] = 0.0f;
-    //     gyro_offset[2] = 0.0f;
-    //     accel_f_norm[0] = 1.0f / LSB_ACC_16B_12G;
-    //
-    //     /*Calibrate Gyro for 100 s*/
-    //     for (uint16_t i = 0; i < 10000; i++) {
-    //         bmi088.GetGyro((uint8_t *) gyro);
-    //         bmi088.GetAccel((uint8_t *) accel);
-    //
-    //         gyro_offset[0] = 0.99f * gyro_offset[0] - 0.01f * static_cast<float>(gyro[0]);
-    //         gyro_offset[1] = 0.99f * gyro_offset[1] - 0.01f * static_cast<float>(gyro[1]);
-    //         gyro_offset[2] = 0.99f * gyro_offset[2] - 0.01f * static_cast<float>(gyro[2]);
-    //
-    //         accel_f_norm[0] = 0.99f * accel_f_norm[0] + 0.01f * sqrtf(static_cast<float>(accel[0] * accel[0] +
-    //                                                                                      accel[1] * accel[1] +
-    //                                                                                      accel[2] * accel[2]));
-    //
-    //         if (++cnt[1] == 100) {
-    //             LL_TIM_OC_SetCompareCH2(TIM12, cnt[0]);
-    //             cnt[0] = cnt[0] ? 0 : 19;
-    //             cnt[1] = 0;
-    //         }
-    //         tx_thread_sleep(10);
-    //     }
-    //
-    //     LL_TIM_OC_SetCompareCH2(TIM12, 19);
-    //     __disable_interrupts();
-    //     FLASH_EraseInitTypeDef EraseInitStruct{.TypeErase=FLASH_TYPEERASE_SECTORS, .Banks=FLASH_BANK_1, .Sector=FLASH_STORAGE_SECTOR, .NbSectors=1, .VoltageRange=FLASH_VOLTAGE_RANGE_3};
-    //     HAL_FLASH_Unlock();
-    //     /*Erase Flash*/
-    //     uint32_t error_msg;
-    //     uint8_t write_buf[32];
-    //     imu_cal.gyro[0] = gyro_offset[0];
-    //     imu_cal.gyro[1] = gyro_offset[1];
-    //     imu_cal.gyro[2] = gyro_offset[2];
-    //     imu_cal.accel_k = 1.0f / (accel_f_norm[0] * static_cast<float>(LSB_ACC_16B_12G));
-    //     imu_cal.crc = cal_crc8_table((uint8_t *) &imu_cal, sizeof(imu_cal_t) - 1);
-    //     memcpy(write_buf, &imu_cal, sizeof(imu_cal_t));
-    //     if (HAL_FLASHEx_Erase(&EraseInitStruct, &error_msg) != HAL_OK) {
-    //         HAL_FLASH_Lock();
-    //     }
-    //     if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_FLASHWORD, FLASH_STORAGE_BASE_ADDRESS, (uint32_t) write_buf) !=
-    //         HAL_OK) {
-    //         HAL_FLASH_Lock();
-    //     }
-    //     HAL_FLASH_Lock();
-    //     NVIC_SystemReset();
-    // }
+    if (!LL_GPIO_IsInputPinSet(KEY_GPIO_Port, KEY_Pin)) {
+        if (!LL_TIM_IsEnabledCounter(TIM12)) {
+            LL_TIM_CC_EnableChannel(TIM12, LL_TIM_CHANNEL_CH2);
+            LL_TIM_EnableAllOutputs(TIM12);
+            LL_TIM_EnableCounter(TIM12);
+        }
+
+        uint16_t cnt[2];
+        cnt[0] = 19;
+        cnt[1] = 0;
+        LL_TIM_OC_SetCompareCH2(TIM12, cnt[0]);
+        tx_thread_sleep(300);
+        LL_TIM_OC_SetCompareCH2(TIM12, 0);
+
+        //Wait for IMU Heat
+        while (bmi088.GetTem() < 49.0f) {
+            tx_thread_sleep(100);
+        }
+        tx_thread_sleep(5000);
+
+        //Pre-set
+        gyro_offset[0] = 0.0f;
+        gyro_offset[1] = 0.0f;
+        gyro_offset[2] = 0.0f;
+        accel_f_norm[0] = 1.0f / LSB_ACC_16B_12G;
+
+        /*Calibrate Gyro for 100 s*/
+        for (uint16_t i = 0; i < 10000; i++) {
+            bmi088.GetGyro((uint8_t *) gyro);
+            bmi088.GetAccel((uint8_t *) accel);
+
+            gyro_offset[0] = 0.99f * gyro_offset[0] - 0.01f * static_cast<float>(gyro[0]);
+            gyro_offset[1] = 0.99f * gyro_offset[1] - 0.01f * static_cast<float>(gyro[1]);
+            gyro_offset[2] = 0.99f * gyro_offset[2] - 0.01f * static_cast<float>(gyro[2]);
+
+            accel_f_norm[0] = 0.99f * accel_f_norm[0] + 0.01f * sqrtf(static_cast<float>(accel[0] * accel[0] +
+                                                                                         accel[1] * accel[1] +
+                                                                                         accel[2] * accel[2]));
+
+            if (++cnt[1] == 100) {
+                LL_TIM_OC_SetCompareCH2(TIM12, cnt[0]);
+                cnt[0] = cnt[0] ? 0 : 19;
+                cnt[1] = 0;
+            }
+            tx_thread_sleep(10);
+        }
+
+        LL_TIM_OC_SetCompareCH2(TIM12, 19);
+        __disable_interrupts();
+        FLASH_EraseInitTypeDef EraseInitStruct{.TypeErase=FLASH_TYPEERASE_SECTORS, .Banks=FLASH_BANK_1, .Sector=FLASH_STORAGE_SECTOR, .NbSectors=1, .VoltageRange=FLASH_VOLTAGE_RANGE_3};
+        HAL_FLASH_Unlock();
+        /*Erase Flash*/
+        uint32_t error_msg;
+        uint8_t write_buf[32];
+        imu_cal.gyro[0] = gyro_offset[0];
+        imu_cal.gyro[1] = gyro_offset[1];
+        imu_cal.gyro[2] = gyro_offset[2];
+        imu_cal.accel_k = 1.0f / (accel_f_norm[0] * static_cast<float>(LSB_ACC_16B_12G));
+        imu_cal.crc = CRC8Maxim((uint8_t *) &imu_cal, sizeof(imu_cal_t) - 1);
+        memcpy(write_buf, &imu_cal, sizeof(imu_cal_t));
+        if (HAL_FLASHEx_Erase(&EraseInitStruct, &error_msg) != HAL_OK) {
+            HAL_FLASH_Lock();
+        }
+        if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_FLASHWORD, FLASH_STORAGE_BASE_ADDRESS, (uint32_t) write_buf) !=
+            HAL_OK) {
+            HAL_FLASH_Lock();
+        }
+        HAL_FLASH_Lock();
+        NVIC_SystemReset();
+    }
 
 
     IMU_QuaternionEKF_Init(10, 0.001, 10000000, 1);
@@ -221,52 +228,84 @@ Msg_INS_t msg_ins{};
     }
 }
 
-// TX_THREAD IMUTemThread;
-// uint8_t IMUTemThreadStack[512] = {0};
-//
-// extern uint32_t fishPrintf(uint8_t *buf, const char *str, ...);
-//
-// extern TX_BYTE_POOL ComPool;
-//
-// [[noreturn]] void IMUTemThreadFun(ULONG initial_input) {
-//     UNUSED(initial_input);
-//     float tmp_last;
-//     Msg_DBG_t dbg = {};
-//     om_topic_t *dbg_topic = om_find_topic("DBG", UINT32_MAX);
-//
-//     cDWT dwt;
-//     PID_Inc_f pid(8.0f, 0.5f, 3.0f, 0.0f, 0.32, 49, 0, false, 0, true, 1.5f);
-//     pid.SetRef(50.0f);
-//
-//     LL_TIM_EnableAllOutputs(TIM3);
-//     LL_TIM_CC_EnableChannel(TIM3, LL_TIM_CHANNEL_CH4);
-//     LL_TIM_OC_SetCompareCH4(TIM3, 99);
-//     LL_TIM_EnableCounter(TIM3);
-//     tx_thread_sleep(2000);
-//
-//     /*Assert*/
-//     if (imu_handle == nullptr) {
-//         LL_TIM_OC_SetCompareCH4(TIM3, 0);
-//         tx_thread_suspend(&IMUTemThread);
-//     }
-//     tmp_last = imu_handle->GetTem();
-//     tx_thread_sleep(1000);
-//     if (tmp_last == imu_handle->GetTem()) {
-//         //error in temp
-//         LL_TIM_OC_SetCompareCH4(TIM3, 0);
-//         tx_thread_suspend(&IMUTemThread);
-//     }
-//
-//     while (imu_handle->GetTem() < 47.5f) {
-//         tx_thread_sleep(320);
-//     }
-//
-//     dwt.update();
-//     for (;;) {
-//         tx_thread_sleep(320);
-//         LL_TIM_OC_SetCompareCH4(TIM3, (uint32_t) pid.Calculate(imu_handle->GetTem(), dwt.dt_sec()));
-//     }
-// }
+TX_THREAD IMUTemThread;
+uint8_t IMUTemThreadStack[1024] = {0};
+float tmp_last;
+float battery_voltage = 24.0f;
+[[noreturn]] void IMUTemThreadFun(ULONG initial_input) {
+    UNUSED(initial_input);
+
+    // Msg_DBG_t dbg = {};
+    // om_topic_t *dbg_topic = om_find_topic("DBG", UINT32_MAX);
+    uint32_t buzzer_value=0;
+    cDWT dwt;
+    PID::PID_Inc_f pid(8.0f, 0.5f, 3.0f, 0.0f, 0.32, 49, 0, false, 0, true, 1.5f);
+    pid.SetRef(50.0f);
+
+    LL_TIM_EnableAllOutputs(TIM12);
+    LL_TIM_CC_EnableChannel(TIM12, LL_TIM_CHANNEL_CH2);
+    LL_TIM_EnableCounter(TIM12);
+    LL_TIM_OC_SetCompareCH2(TIM12, 99);
+
+    LL_TIM_EnableAllOutputs(TIM3);
+    LL_TIM_CC_EnableChannel(TIM3, LL_TIM_CHANNEL_CH4);
+    LL_TIM_EnableCounter(TIM3);
+
+    HAL_ADCEx_Calibration_Start(&hadc1,ADC_CALIB_OFFSET_LINEARITY,ADC_SINGLE_ENDED);
+    /*Assert*/
+    while (imu_handle == nullptr) {
+        LL_TIM_OC_SetCompareCH4(TIM3, 0);
+        tx_thread_sleep(100);
+    }
+    LL_TIM_OC_SetCompareCH2(TIM12, 0);
+
+    tmp_last = imu_handle->GetTem();
+    LL_TIM_OC_SetCompareCH4(TIM3, 99);
+    tx_thread_sleep(2000);
+
+    if (tmp_last == imu_handle->GetTem()) {
+        //error in temp
+        LL_TIM_OC_SetCompareCH4(TIM3, 0);
+        tx_thread_suspend(&IMUTemThread);
+    }
+
+    while (imu_handle->GetTem() < 47.5f) {
+        battery_voltage = 0.9f * battery_voltage + HAL_ADC_GetValue(&hadc1) * 0.000055389404296875f;
+        tmp_last = imu_handle->GetTem();
+        HAL_ADC_Start(&hadc1);
+        tx_thread_sleep(320);
+    }
+
+    dwt.update();
+    for (;;) {
+        tx_thread_sleep(320);
+        battery_voltage = 0.9f * battery_voltage + HAL_ADC_GetValue(&hadc1) * 0.000055389404296875f;
+
+        if (battery_voltage > 8.0f) {
+            if (battery_voltage < 11.4) {
+
+                if (buzzer_value == 0) {
+                    buzzer_value = 49;
+                } else {
+                    buzzer_value = 0;
+                }
+            }
+            else {
+                buzzer_value = 0;
+            }
+            LL_TIM_OC_SetCompareCH2(TIM12, buzzer_value);
+        }
+
+        tmp_last = imu_handle->GetTem();
+        float k_pid = (24.0f/ battery_voltage);
+        k_pid = k_pid*k_pid*pid.Calculate(imu_handle->GetTem(), dwt.dt_sec());
+        if (k_pid > 199) {
+            k_pid = 199;
+        }
+        LL_TIM_OC_SetCompareCH4(TIM3, static_cast<uint32_t>(k_pid));
+        HAL_ADC_Start(&hadc1);
+    }
+}
 
 void EXTI15_10_IRQHandler() {
     if (LL_EXTI_IsActiveFlag_0_31(LL_EXTI_LINE_10)) {

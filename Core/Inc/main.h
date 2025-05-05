@@ -72,6 +72,8 @@ void Error_Handler(void);
 #define OUT2_GPIO_Port GPIOC
 #define OUT1_Pin LL_GPIO_PIN_14
 #define OUT1_GPIO_Port GPIOC
+#define EN5V_Pin LL_GPIO_PIN_15
+#define EN5V_GPIO_Port GPIOC
 #define SPI2_CS0_Pin LL_GPIO_PIN_0
 #define SPI2_CS0_GPIO_Port GPIOC
 #define SPI2_CS1_Pin LL_GPIO_PIN_3
@@ -82,8 +84,8 @@ void Error_Handler(void);
 #define IMU_INT3_Pin LL_GPIO_PIN_12
 #define IMU_INT3_GPIO_Port GPIOE
 #define IMU_INT3_EXTI_IRQn EXTI15_10_IRQn
-#define EN5V_Pin LL_GPIO_PIN_15
-#define EN5V_GPIO_Port GPIOA
+#define KEY_Pin LL_GPIO_PIN_15
+#define KEY_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
 
