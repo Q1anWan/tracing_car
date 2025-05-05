@@ -13,6 +13,7 @@
 #include "tx_api.h"
 #include "core.h"
 #include "arm_math.h"
+#include "Filter.hpp"
 extern FDCAN_HandleTypeDef hfdcan1;
 extern FDCAN_HandleTypeDef hfdcan2;
 
@@ -50,7 +51,7 @@ Msg_Remoter_t rmt_msg;
 
 #define K_CURRENT 10000.0f
 /*Close-loop control Motors*/
-
+int16_t current[2];
 [[noreturn]] void MotorThreadFun(ULONG initial_input) {
     /*Creat Wheel Topic*/
     om_suber_t *wheel_ctl_suber = om_subscribe(om_find_topic("MOTOR_CTL", UINT32_MAX));
@@ -65,7 +66,7 @@ Msg_Remoter_t rmt_msg;
 
     zdt[0].SetID(1); //FDCAN 1
     zdt[1].SetID(1); //FDCAN 2
-    tx_thread_sleep(5000);
+    tx_thread_sleep(2000);
     CANFilterConfig();
     FDCAN_TxHeaderTypeDef tx_header2_0 = {
         .Identifier = 0x01,
@@ -92,14 +93,14 @@ Msg_Remoter_t rmt_msg;
     };
 
     // MotorReInit();
-
+    cFilterBTW2_1000Hz_33Hz filter[2];
     tx_thread_sleep(100);
 
     for (;;) {
 
         om_suber_export(wheel_ctl_suber, &wheel_ctr_data, false);
 
-        int16_t current[2];
+
 
         current[0] = static_cast<int16_t>((wheel_ctr_data.torque[0] * K_CURRENT));
         current[1] = static_cast<int16_t>((wheel_ctr_data.torque[1] * K_CURRENT));
@@ -140,8 +141,8 @@ Msg_Remoter_t rmt_msg;
 
         v1 = zdt[0].GetVelocity();
         v2 = zdt[1].GetVelocity();
-        wheel_fdb_data.vel[0] = zdt[0].GetVelocity()*2*PI*WHEEL_R/60.0f;
-        wheel_fdb_data.vel[1] = zdt[1].GetVelocity()*2*PI*WHEEL_R/60.0f;
+        wheel_fdb_data.vel[0] = filter[0].Update(zdt[0].GetVelocity()*2*PI/60.0f);
+        wheel_fdb_data.vel[1] = filter[1].Update(zdt[1].GetVelocity()*2*PI/60.0f);
 
         om_publish(wheel_fdb, &wheel_fdb_data, sizeof(wheel_fdb_data), false, false);
         tx_thread_sleep(1);

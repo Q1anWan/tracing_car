@@ -27,6 +27,24 @@ class cFilterBTW2_1000Hz_100Hz
 	{IIRBuf[0]=0;IIRBuf[1]=0;IIRBuf[2]=0;IIRBuf[3]=0;}
 };
 
+class cFilterBTW2_1000Hz_33Hz
+{
+    arm_biquad_casd_df1_inst_f32 BTW{};
+    float IIRBuf[4]={0};
+    float IIRCoeff[5]={1.0f, 2.0f, 1.0f, 1.708465825776627422527553790132515132427f, -0.745860580586598542751630702696274966002f};
+    float Gain = 0.009348688702492793933807035955396713689f;
+
+public:
+    cFilterBTW2_1000Hz_33Hz(){arm_biquad_cascade_df1_init_f32(&BTW, 1, IIRCoeff, IIRBuf);}
+    float Update(float data){
+        float tmp;
+        arm_biquad_cascade_df1_f32(&BTW, &data, &tmp ,1);
+        return tmp*this->Gain;
+    }
+    void CleanBuf()
+    {IIRBuf[0]=0;IIRBuf[1]=0;IIRBuf[2]=0;IIRBuf[3]=0;}
+};
+
 class cFilterBTW2_500Hz_100Hz
 {
     arm_biquad_casd_df1_inst_f32 BTW{};

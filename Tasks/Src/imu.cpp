@@ -56,7 +56,8 @@ Msg_INS_t msg_ins{};
     float last_yaw = 0.0f;
     float multi_yaw = 0.0f;
 
-    cFilterBTW2_1000Hz_100Hz filter[3];
+    cFilterBTW2_1000Hz_100Hz filter_accel[3];
+    cFilterBTW2_1000Hz_100Hz filter_gyro[3];
     // Msg_INS_t msg_ins{};
     imu_cal_t imu_cal{};
 
@@ -177,13 +178,13 @@ Msg_INS_t msg_ins{};
 
         /*100Hz LowPass BWT 2-Order*/
         /*Watch out! Orientation R-F-U*/
-        accel_f_norm[0] = filter[0].Update(accel_f_norm[0]);
-        accel_f_norm[1] = filter[1].Update(accel_f_norm[1]);
-        accel_f_norm[2] = filter[2].Update(accel_f_norm[2]);
+        accel_f_norm[0] = filter_accel[0].Update(accel_f_norm[0]);
+        accel_f_norm[1] = filter_accel[1].Update(accel_f_norm[1]);
+        accel_f_norm[2] = filter_accel[2].Update(accel_f_norm[2]);
 
-        gyro_f[0] = (static_cast<float> (gyro[0]) + imu_cal.gyro[0]) * static_cast<float> (LSB_GYRO_16B_1000_R);
-        gyro_f[1] = (static_cast<float> (gyro[1]) + imu_cal.gyro[1]) * static_cast<float> (LSB_GYRO_16B_1000_R);
-        gyro_f[2] = (static_cast<float> (gyro[2]) + imu_cal.gyro[2]) * static_cast<float> (LSB_GYRO_16B_1000_R);
+        gyro_f[0] = filter_gyro[0].Update((static_cast<float> (gyro[0]) + imu_cal.gyro[0]) * static_cast<float> (LSB_GYRO_16B_1000_R));
+        gyro_f[1] = filter_gyro[1].Update((static_cast<float> (gyro[1]) + imu_cal.gyro[1]) * static_cast<float> (LSB_GYRO_16B_1000_R));
+        gyro_f[2] = filter_gyro[2].Update((static_cast<float> (gyro[2]) + imu_cal.gyro[2]) * static_cast<float> (LSB_GYRO_16B_1000_R));
 
         IMU_QuaternionEKF_Update(quaternion, gyro_f[0], gyro_f[1], gyro_f[2], accel_f_norm[0], accel_f_norm[1],
                                  accel_f_norm[2],

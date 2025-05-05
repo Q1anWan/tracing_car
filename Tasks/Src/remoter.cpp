@@ -88,8 +88,8 @@ SRAM_SET_RAM_D3 float remoter_value[4];
 
             msg_remoter.ch_0 = fmaxf(-1.0f, fminf(1.0f, rmt_half_rev * tmp_buf[0]));
             msg_remoter.ch_1 = fmaxf(-1.0f, fminf(1.0f, rmt_half_rev * tmp_buf[1]));
-            msg_remoter.ch_2 = fmaxf(-1.0f, fminf(1.0f, rmt_half_rev * tmp_buf[2]));
-            msg_remoter.ch_3 = fmaxf(-1.0f, fminf(1.0f, rmt_half_rev * tmp_buf[3]));
+            msg_remoter.ch_2 = fmaxf(-1.0f, fminf(1.0f, rmt_half_rev * tmp_buf[3]));
+            msg_remoter.ch_3 = fmaxf(-1.0f, fminf(1.0f, rmt_half_rev * tmp_buf[2]));
             msg_remoter.switch_left = map_value(tmp_buf[4]);
             msg_remoter.switch_right = map_value(tmp_buf[5]);
             // msg_remoter.wheel = rmt_half_rev * (float) (tmp_buf[6]);
