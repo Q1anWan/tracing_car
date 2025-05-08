@@ -1,4 +1,19 @@
-**/*build*
-**/*.vscode*
-**/.cache*
-.idea
+# 构建输出目录：只忽略目录
+**/*build*/
+
+# IDE 配置目录
+**/.vscode/
+.idea/
+
+# 缓存目录
+**/.cache/
+
+# CMake 源文件夹
+cmake/
+
+# 中间件目录
+Middlewares/
+
+# 特定链接脚本
+STM32*_FLASH.ld
+
