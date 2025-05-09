@@ -70,6 +70,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC
     DSP/Include
     DSP/Include/dsp
     PUBLIC $<TARGET_PROPERTY:OneMessage,INTERFACE_INCLUDE_DIRECTORIES>
+    mavlink/wheellink
 )
 
 # Add project symbols (macros)

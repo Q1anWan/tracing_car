@@ -1,10 +1,10 @@
 /** @file
- *    @brief MAVLink comm protocol testsuite generated from mavlink.xml
+ *    @brief MAVLink comm protocol testsuite generated from wheellink.xml
  *    @see https://mavlink.io/en/
  */
 #pragma once
-#ifndef MAVLINK_TESTSUITE_H
-#define MAVLINK_TESTSUITE_H
+#ifndef WHEELLINK_TESTSUITE_H
+#define WHEELLINK_TESTSUITE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,12 +13,12 @@ extern "C" {
 #ifndef MAVLINK_TEST_ALL
 #define MAVLINK_TEST_ALL
 
-static void mavlink_test_mavlink(uint8_t, uint8_t, mavlink_message_t *last_msg);
+static void mavlink_test_wheellink(uint8_t, uint8_t, mavlink_message_t *last_msg);
 
 static void mavlink_test_all(uint8_t system_id, uint8_t component_id, mavlink_message_t *last_msg)
 {
 
-    mavlink_test_mavlink(system_id, component_id, last_msg);
+    mavlink_test_wheellink(system_id, component_id, last_msg);
 }
 #endif
 
@@ -86,7 +86,7 @@ static void mavlink_test_maixcam_lane_feedback(uint8_t system_id, uint8_t compon
 #endif
 }
 
-static void mavlink_test_mavlink(uint8_t system_id, uint8_t component_id, mavlink_message_t *last_msg)
+static void mavlink_test_wheellink(uint8_t system_id, uint8_t component_id, mavlink_message_t *last_msg)
 {
     mavlink_test_maixcam_lane_feedback(system_id, component_id, last_msg);
 }
@@ -94,4 +94,4 @@ static void mavlink_test_mavlink(uint8_t system_id, uint8_t component_id, mavlin
 #ifdef __cplusplus
 }
 #endif // __cplusplus
-#endif // MAVLINK_TESTSUITE_H
+#endif // WHEELLINK_TESTSUITE_H

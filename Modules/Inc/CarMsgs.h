@@ -83,6 +83,14 @@ struct Msg_Remoter_t {
     uint64_t timestamp;
 };
 
+struct Msg_Control_Vector_t {
+    float vel;
+    float w;
+    bool over_time;
+    uint64_t timestamp;
+};
+
+
 #pragma pack(pop)
 #ifdef __cplusplus
 }

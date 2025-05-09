@@ -66,13 +66,12 @@ Msg_Motor_Fdb_t motor_fdb;
 [[noreturn]] void LQRThreadFun(ULONG initial_input) {
     om_suber_t *ins_suber = om_subscribe(om_find_topic("INS", UINT32_MAX));
     om_suber_t *motor_fdb_suber = om_subscribe(om_find_topic("MOTOR_FDB", UINT32_MAX));
-    om_suber_t *rmt_suber = om_subscribe(om_find_topic("REMOTER", UINT32_MAX));
     om_topic_t *motor_control_topic = om_find_topic("MOTOR_CTL", UINT32_MAX);
-
+    om_suber_t *control_vec_suber = om_subscribe(om_find_topic("ROBOT_CTL", UINT32_MAX));
 
     Msg_Motor_Ctr_t motor_control;
     Msg_INS_t ins;
-    Msg_Remoter_t rmt;
+    Msg_Control_Vector_t control_vector;
 
     cVelFusionKF kf;
     cFilterBTW2_1000Hz_33Hz filter_control[4];
@@ -86,7 +85,7 @@ Msg_Motor_Fdb_t motor_fdb;
     for (;;) {
         om_suber_export(ins_suber, &ins, false);
         om_suber_export(motor_fdb_suber, &motor_fdb, false);
-        om_suber_export(rmt_suber, &rmt, false);
+        om_suber_export(control_vec_suber, &control_vector, false);
 
         //KF
         float vel_temp = 0.5f * (motor_fdb.vel[0] - motor_fdb.vel[1]) * WHEEL_R;
@@ -119,9 +118,12 @@ Msg_Motor_Fdb_t motor_fdb;
         fdb_x[1] = kf.GetVhat();
         fdb_x[2] = multi_yaw;
         fdb_x[3] = ins.gyro[2];
+        if (tx_time_get() - control_vector.timestamp > 50) {
+            control_vector.over_time = true;
+        }
 
-        if (rmt.switch_left == 2) {
-            ref_x[1] = filter_control[0].Update(rmt.ch_3);
+        if (control_vector.over_time == false) {
+            ref_x[1] = control_vector.vel;
             ref_x[0] = ref_x[0] + ref_x[1] * 0.001f; //s = v*t
             //相距太大作下限制幅度
             if (ref_x[0] - fdb_x[0] > 0.2f) {
@@ -130,7 +132,7 @@ Msg_Motor_Fdb_t motor_fdb;
                 ref_x[0] = fdb_x[0] - 0.2f;
             }
 
-            ref_x[2] -= filter_control[1].Update(rmt.ch_0) * 0.01f;
+            ref_x[2] += control_vector.w;
             ref_x[3] = 0;
 
             ut[0] = K[0] * (fdb_x[0] - ref_x[0]) + K[1] * (fdb_x[1] - ref_x[1]) +

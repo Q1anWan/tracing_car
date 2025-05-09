@@ -49,6 +49,10 @@ extern TX_THREAD LQRThread;
 extern uint8_t LQRThreadStack[4096];
 extern void LQRThreadFun(ULONG initial_input);
 
+extern TX_THREAD ScheThread;
+extern uint8_t ScheThreadStack[1024];
+extern void ScheThreadFun(ULONG input);
+
 void my_thread_entry(ULONG thread_input) {
     /* Enter into a forever loop. */
     LL_GPIO_SetOutputPin(EN5V_GPIO_Port,EN5V_Pin);
@@ -81,6 +85,8 @@ extern "C" void myapp_start() {
     om_config_topic(nullptr, "CA", "INS", sizeof(Msg_INS_t));
     om_config_topic(nullptr, "CA", "MOTOR_FDB", sizeof(Msg_Motor_Fdb_t));
     om_config_topic(nullptr, "CA", "MOTOR_CTL", sizeof(Msg_Motor_Ctr_t));
+    om_config_topic(nullptr, "CA", "MAIXCAM_CTL", sizeof(Msg_Control_Vector_t));
+    om_config_topic(nullptr, "CA", "ROBOT_CTL", sizeof(Msg_Control_Vector_t));
     tx_byte_pool_create(
         &MathPool,
         (CHAR *) "Math_Pool",
@@ -106,18 +112,21 @@ extern "C" void myapp_start() {
 
     tx_thread_create(&MotorThread, "Motor",
                      MotorThreadFun, 0x0000, MotorThreadStack, sizeof(MotorThreadStack),
-                     2, 2, TX_NO_TIME_SLICE, TX_AUTO_START);
+                     1, 1, TX_NO_TIME_SLICE, TX_AUTO_START);
 
-    tx_thread_create(&IMUThread, "IMU", IMUThreadFun, 0x0000, IMUThreadStack, sizeof(IMUThreadStack), 2, 2,
+    tx_thread_create(&IMUThread, "IMU", IMUThreadFun, 0x0000, IMUThreadStack, sizeof(IMUThreadStack), 1, 1,
                      TX_NO_TIME_SLICE, TX_AUTO_START);
 
-    tx_thread_create(&IMUTemThread, "IMU_Temp", IMUTemThreadFun, 0x0000, IMUTemThreadStack, sizeof(IMUTemThreadStack), 4, 4,
+    tx_thread_create(&IMUTemThread, "IMU_Temp", IMUTemThreadFun, 0x0000, IMUTemThreadStack, sizeof(IMUTemThreadStack), 6, 6,
                      TX_NO_TIME_SLICE, TX_AUTO_START);
 
-    tx_thread_create(&LQRThread,"LQR", LQRThreadFun, 0x0000, LQRThreadStack, sizeof(LQRThreadStack), 3, 3,
+    tx_thread_create(&LQRThread,"LQR", LQRThreadFun, 0x0000, LQRThreadStack, sizeof(LQRThreadStack), 4, 4,
                      TX_NO_TIME_SLICE, TX_AUTO_START);
 
-    tx_thread_create(&SerialCommThread, "SerialComm",SerialCommThreadFun, 0x0000,SerialCommThreadStack, sizeof(SerialCommThreadStack),3, 3,
+    tx_thread_create(&SerialCommThread, "SerialComm",SerialCommThreadFun, 0x0000,SerialCommThreadStack, sizeof(SerialCommThreadStack),2, 2,
                  TX_NO_TIME_SLICE, TX_AUTO_START);
+
+    tx_thread_create(&ScheThread, "Scheduler",ScheThreadFun, 0x0000,ScheThreadStack, sizeof(ScheThreadStack),3, 3,
+               TX_NO_TIME_SLICE, TX_AUTO_START);
 
 }

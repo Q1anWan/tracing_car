@@ -3,13 +3,7 @@
 #include "CarMsgs.h"         // 项目通信数据结构定义（如需要定义速度/控制帧结构）
 #include "app_threadx.h"     // ThreadX RTOS 的线程与信号量接口
 #include "om.h"              // Open Message 通信中间件接口（如未使用可忽略）
-
-// =============================
-// 串口通信帧格式定义
-// =============================
-#define UART_FRAME_LEN 7          // 总帧长度为 7 字节（固定格式）
-#define UART_FRAME_HEAD 0xA5      // 帧头标志，用于判断包起始
-#define UART_FRAME_TAIL 0x5A      // 帧尾标志，用于判断包结尾
+#include "mavlink.h"
 
 // =============================
 // 通信线程资源
@@ -23,8 +17,8 @@ TX_SEMAPHORE SerialCommSem;             // 信号量，用于串口接收通知�
 // =============================
 int16_t maixcam_vx = 0;     // 从 MaixCAM 接收到的线速度（单位 mm/s）
 int16_t maixcam_wz = 0;     // 从 MaixCAM 接收到的角速度（单位 mrad/s）
-uint8_t uart_rx_buf[UART_FRAME_LEN];  // 串口接收缓冲区（DMA 直接写入）
-
+uint8_t uart_rx_buf[128];  // 串口接收缓冲区（DMA 直接写入）
+uint16_t maixcam_len;
 // =============================
 // 串口通信处理线程函数
 // 功能：等待信号量，解析串口数据帧，提取速度信息
@@ -32,49 +26,53 @@ uint8_t uart_rx_buf[UART_FRAME_LEN];  // 串口接收缓冲区（DMA 直接写�
 // =============================
 [[noreturn]] void SerialCommThreadFun(ULONG input) {
     // 启动 DMA + IDLE 模式接收
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, uart_rx_buf, UART_FRAME_LEN);
-
-    // 禁用 DMA 半中断（只保留 IDLE 中断）
-    __HAL_DMA_DISABLE_IT(huart3.hdmarx, DMA_IT_HT);
-
+    mavlink_status_t status;
+    /*选择一个Mavlink通道*/
+    int chan = MAVLINK_COMM_0;
+    /*创建一个Mavlink消息结构体*/
+    mavlink_message_t msg;
+    Msg_Control_Vector_t MAIXCAM_vector={.vel = 0,.w=0};
+    om_topic_t *ctl_topic = om_find_topic("MAIXCAM_CTL", UINT32_MAX);
     while (1) {
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart3, uart_rx_buf, sizeof(uart_rx_buf));
         // 等待串口数据接收完成信号（由中断回调发出）
-        if (tx_semaphore_get(&SerialCommSem, TX_WAIT_FOREVER) == TX_SUCCESS) {
+        if (tx_semaphore_get(&SerialCommSem, 1000) == TX_NO_INSTANCE) {
+            MAIXCAM_vector.w = 0;
+            MAIXCAM_vector.vel = 0;
+            MAIXCAM_vector.timestamp = tx_time_get();
+            MAIXCAM_vector.over_time = true;
+            om_publish(ctl_topic, &MAIXCAM_vector, sizeof(MAIXCAM_vector), false, false);
+            tx_semaphore_get(&SerialCommSem, TX_WAIT_FOREVER);
+        }
+        // 清除 CPU 数据缓存，确保读取的是 DMA 写入后的最新数据
+        SCB_InvalidateDCache_by_Addr((uint32_t *) uart_rx_buf, sizeof(uart_rx_buf));
+        mavlink_maixcam_lane_feedback_t maixcam_msg;
 
-            // 清除 CPU 数据缓存，确保读取的是 DMA 写入后的最新数据
-            SCB_InvalidateDCache_by_Addr((uint32_t *) uart_rx_buf, UART_FRAME_LEN);
-
-            // 判断帧头和帧尾是否正确，确保包合法
-            if (uart_rx_buf[0] == UART_FRAME_HEAD && uart_rx_buf[6] == UART_FRAME_TAIL) {
-
-                // 校验中间数据是否正确（使用 XOR 校验）
-                uint8_t checksum = uart_rx_buf[1] ^ uart_rx_buf[2] ^ uart_rx_buf[3] ^ uart_rx_buf[4];
-                if (checksum == uart_rx_buf[5]) {
-                    // 提取 vx 和 wz，两字节合并为 int16_t（小端格式）
-                    maixcam_vx = (int16_t)(uart_rx_buf[2] << 8 | uart_rx_buf[1]);
-                    maixcam_wz = (int16_t)(uart_rx_buf[4] << 8 | uart_rx_buf[3]);
+        /*收到新数据*/
+        for (ULONG i = 0; i < maixcam_len; i++) {
+            /*解包*/
+            /*MavlinkV2出现错误包后，再次接收二个正常包后恢复正常解析，但第一个正常包将丢失，第二个可被正确解析*/
+            if (mavlink_parse_char(chan, uart_rx_buf[i], &msg, &status)) {
+                /*解析包成功 处理数据*/
+                switch (msg.msgid) {
+                    case MAVLINK_MSG_ID_MAIXCAM_LANE_FEEDBACK: {
+                        mavlink_msg_maixcam_lane_feedback_decode(&msg, &maixcam_msg);
+                        MAIXCAM_vector.vel = maixcam_msg.vx;
+                        MAIXCAM_vector.w = maixcam_msg.wz;
+                        MAIXCAM_vector.timestamp = tx_time_get();
+                        MAIXCAM_vector.over_time = false;
+                        /*Do someting with new message*/
+                        /*...*/
+                        break;
+                    }
                 }
             }
-
-            // 重新启动 DMA + IDLE 模式继续接收下一帧
-            HAL_UARTEx_ReceiveToIdle_DMA(&huart3, uart_rx_buf, UART_FRAME_LEN);
+        }
+        if (tx_time_get() - MAIXCAM_vector.timestamp > 1000) {
+            MAIXCAM_vector.over_time = true;
         }
 
-        // 稍作休眠，释放 CPU 控制权（虽然信号量阻塞已足够）
-        tx_thread_sleep(1);
+        om_publish(ctl_topic, &MAIXCAM_vector, sizeof(MAIXCAM_vector), false, false);
     }
 }
 
-// =============================
-// 串口接收事件回调函数（版本名带 _serial）
-// 由 HAL 在 UART 空闲中断触发时调用
-// =============================
-void HAL_UARTEx_RxEventCallback_serial(UART_HandleTypeDef *huart, uint16_t Size)
-{
-    // 判断是否为 USART3 串口，并且数据长度正确
-    if (huart == &huart3 && Size == UART_FRAME_LEN)
-    {
-        // 通知串口处理线程可以解析数据
-        tx_semaphore_put(&SerialCommSem);
-    }
-}

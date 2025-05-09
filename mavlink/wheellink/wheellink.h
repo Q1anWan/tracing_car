@@ -1,16 +1,16 @@
 /** @file
- *  @brief MAVLink comm protocol generated from mavlink.xml
+ *  @brief MAVLink comm protocol generated from wheellink.xml
  *  @see http://mavlink.org
  */
 #pragma once
-#ifndef MAVLINK_MAVLINK_H
-#define MAVLINK_MAVLINK_H
+#ifndef MAVLINK_WHEELLINK_H
+#define MAVLINK_WHEELLINK_H
 
 #ifndef MAVLINK_H
-    #error Wrong include order: MAVLINK_MAVLINK.H MUST NOT BE DIRECTLY USED. Include mavlink.h from the same directory instead or set ALL AND EVERY defines from MAVLINK.H manually accordingly, including the #define MAVLINK_H call.
+    #error Wrong include order: MAVLINK_WHEELLINK.H MUST NOT BE DIRECTLY USED. Include mavlink.h from the same directory instead or set ALL AND EVERY defines from MAVLINK.H manually accordingly, including the #define MAVLINK_H call.
 #endif
 
-#define MAVLINK_MAVLINK_XML_HASH -6538925925454141697
+#define MAVLINK_WHEELLINK_XML_HASH -4150134051621983700
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,7 +28,7 @@ extern "C" {
 
 #include "../protocol.h"
 
-#define MAVLINK_ENABLED_MAVLINK
+#define MAVLINK_ENABLED_WHEELLINK
 
 // ENUM DEFINITIONS
 
@@ -62,7 +62,7 @@ typedef enum MAIXCAM_SYSTEM_ID
 
 
 
-#if MAVLINK_MAVLINK_XML_HASH == MAVLINK_PRIMARY_XML_HASH
+#if MAVLINK_WHEELLINK_XML_HASH == MAVLINK_PRIMARY_XML_HASH
 # define MAVLINK_MESSAGE_INFO {MAVLINK_MESSAGE_INFO_MAIXCAM_LANE_FEEDBACK}
 # define MAVLINK_MESSAGE_NAMES {{ "MAIXCAM_LANE_FEEDBACK", 100 }}
 # if MAVLINK_COMMAND_24BIT
@@ -73,4 +73,4 @@ typedef enum MAIXCAM_SYSTEM_ID
 #ifdef __cplusplus
 }
 #endif // __cplusplus
-#endif // MAVLINK_MAVLINK_H
+#endif // MAVLINK_WHEELLINK_H
