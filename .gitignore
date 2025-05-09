@@ -13,6 +13,7 @@ cmake/
 
 # 中间件目录
 Middlewares/
+Drivers/
 
 # 特定链接脚本
 STM32*_FLASH.ld

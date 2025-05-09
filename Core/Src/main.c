@@ -110,6 +110,7 @@ int main(void)
   MX_FDCAN1_Init();
   MX_FDCAN2_Init();
   MX_TIM3_Init();
+  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -125,9 +126,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    HAL_GPIO_TogglePin(OUT1_GPIO_Port, OUT1_Pin);
-    HAL_GPIO_TogglePin(OUT2_GPIO_Port, OUT2_Pin);
-    HAL_Delay(500);
   }
   /* USER CODE END 3 */
 }

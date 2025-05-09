@@ -18,6 +18,12 @@ UCHAR Msg_PoolBuf[4096] = {0};
 TX_BYTE_POOL MathPool;
 UCHAR Math_PoolBuf[14336] = {0};
 
+extern TX_THREAD SerialCommThread;
+extern uint8_t SerialCommThreadStack[2048];
+
+extern void SerialCommThreadFun(ULONG initial_input);  // 声明函数
+
+
 extern TX_THREAD RemoterThread;
 extern uint8_t RemoterThreadStack[2048];
 extern TX_SEMAPHORE RemoterThreadSem;
@@ -110,4 +116,8 @@ extern "C" void myapp_start() {
 
     tx_thread_create(&LQRThread,"LQR", LQRThreadFun, 0x0000, LQRThreadStack, sizeof(LQRThreadStack), 3, 3,
                      TX_NO_TIME_SLICE, TX_AUTO_START);
+
+    tx_thread_create(&SerialCommThread, "SerialComm",SerialCommThreadFun, 0x0000,SerialCommThreadStack, sizeof(SerialCommThreadStack),3, 3,
+                 TX_NO_TIME_SLICE, TX_AUTO_START);
+
 }

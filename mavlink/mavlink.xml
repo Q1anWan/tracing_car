@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<mavlink>
+	<version>2</version>
+
+	<enums>
+		<!-- MaixCAM 与 MCU 通信的系统 ID 定义 -->
+		<enum name="MAIXCAM_SYSTEM_ID">
+			<description>System ID for MaixCAM to MCU MAVLink messages.</description>
+			<entry value="10" name="SYS_ID_MAIXCAM">
+				<description>MaixCAM device sending tracking data.</description>
+			</entry>
+			<entry value="1" name="SYS_ID_MCU">
+				<description>MCU that receives data for LQR control.</description>
+			</entry>
+		</enum>
+	</enums>
+
+	<messages>
+		<!-- 消息：MaixCAM 输出的速度和角速度，用于 LQR 控制 -->
+		<message id="100" name="MAIXCAM_LANE_FEEDBACK">
+			<description>Tracking speed and angular velocity output from MaixCAM vision.</description>
+
+			<field type="float" name="vx" units="m/s">Line-tracking linear velocity (forward)</field>
+			<field type="float" name="wz" units="rad/s">Angular velocity around Z axis (yaw)</field>
+			<field type="uint32_t" name="timestamp" units="ms">Timestamp in milliseconds (system time)</field>
+		</message>
+	</messages>
+</mavlink>
