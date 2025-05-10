@@ -3,6 +3,7 @@
 #include "CarMsgs.h"
 #include "app_threadx.h"
 #include "om.h"
+#include "Filter.hpp"
 
 TX_THREAD RemoterThread;
 uint8_t RemoterThreadStack[2048] = {0};
@@ -42,6 +43,8 @@ SRAM_SET_RAM_D3 float remoter_value[4];
     float rmt_half_rev = 2.0f / (float) (BUS_MAX - BUS_MIN);
     int16_t rmt_mid = (BUS_MAX + BUS_MIN) / 2;
     int16_t tmp_buf[7] = {0};
+    int16_t tmp_last[4];
+
     HAL_UARTEx_ReceiveToIdle_DMA(&huart5, data_rx, RCV_BUS_SIZE);
     for (;;) {
         if (tx_semaphore_get(&RemoterThreadSem, 100) != TX_SUCCESS) {
@@ -54,7 +57,12 @@ SRAM_SET_RAM_D3 float remoter_value[4];
             msg_remoter.switch_left = SWITCH_DEFAULT;
             msg_remoter.switch_right = SWITCH_DEFAULT;
             msg_remoter.timestamp = tx_time_get();
+
             om_publish(remoter_topic, &msg_remoter, sizeof(msg_remoter), true, false);
+
+            for (uint8_t i = 0; i < 4; i++) {
+                tmp_last[i] = 0;
+            }
             tx_semaphore_get(&RemoterThreadSem, TX_WAIT_FOREVER);
         }
 
@@ -75,6 +83,7 @@ SRAM_SET_RAM_D3 float remoter_value[4];
             tmp_buf[5] = ((((int16_t) data_rx[7] >> 7) | ((int16_t) data_rx[8] << 1) |
                            ((int16_t) data_rx[9] << 9)) & 0x07FF);
 
+
             if (tmp_buf[2] == -960) {
                 msg_remoter.online = false;
             } else {
@@ -84,18 +93,24 @@ SRAM_SET_RAM_D3 float remoter_value[4];
                         tmp_buf[i] = 0;
                     }
                 }
+
+                for (uint8_t i = 0; i < 4; i++) {
+                    if (abs(tmp_buf[i] - tmp_last[i]) > rmt_mid) {
+                        tmp_buf[i] = tmp_last[i];
+                    } else {
+                        tmp_last[i] = tmp_buf[i];
+                    }
+                }
+
                 msg_remoter.online = true;
+
                 msg_remoter.ch_0 = fmaxf(-1.0f, fminf(1.0f, rmt_half_rev * tmp_buf[0]));
                 msg_remoter.ch_1 = fmaxf(-1.0f, fminf(1.0f, rmt_half_rev * tmp_buf[1]));
                 msg_remoter.ch_2 = fmaxf(-1.0f, fminf(1.0f, rmt_half_rev * tmp_buf[3]));
                 msg_remoter.ch_3 = fmaxf(-1.0f, fminf(1.0f, rmt_half_rev * tmp_buf[2]));
+
                 msg_remoter.switch_left = map_value(tmp_buf[4]);
                 msg_remoter.switch_right = map_value(tmp_buf[5]);
-
-                remoter_value[0] = msg_remoter.ch_0;
-                remoter_value[1] = msg_remoter.ch_1;
-                remoter_value[2] = msg_remoter.ch_2;
-                remoter_value[3] = msg_remoter.ch_3;
 
                 msg_remoter.timestamp = tx_time_get();
             }

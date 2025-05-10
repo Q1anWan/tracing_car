@@ -17,7 +17,7 @@ TX_SEMAPHORE SerialCommSem;             // 信号量，用于串口接收通知�
 // =============================
 int16_t maixcam_vx = 0;     // 从 MaixCAM 接收到的线速度（单位 mm/s）
 int16_t maixcam_wz = 0;     // 从 MaixCAM 接收到的角速度（单位 mrad/s）
-uint8_t uart_rx_buf[128];  // 串口接收缓冲区（DMA 直接写入）
+SRAM_SET_RAM_D2 uint8_t uart_rx_buf[128];  // 串口接收缓冲区（DMA 直接写入）
 uint16_t maixcam_len;
 // =============================
 // 串口通信处理线程函数
@@ -69,10 +69,13 @@ uint16_t maixcam_len;
             }
         }
         if (tx_time_get() - MAIXCAM_vector.timestamp > 1000) {
+            MAIXCAM_vector.vel = 0;
+            MAIXCAM_vector.w = 0;
             MAIXCAM_vector.over_time = true;
         }
 
         om_publish(ctl_topic, &MAIXCAM_vector, sizeof(MAIXCAM_vector), false, false);
+        tx_thread_sleep(1);
     }
 }
 

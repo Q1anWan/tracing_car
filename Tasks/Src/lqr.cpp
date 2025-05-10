@@ -74,8 +74,6 @@ Msg_Motor_Fdb_t motor_fdb;
     Msg_Control_Vector_t control_vector;
 
     cVelFusionKF kf;
-    cFilterBTW2_1000Hz_33Hz filter_control[4];
-
     float K[8] = {-1.963278, -0.750100, 1.442505, 0.299184, 1.963278, 0.750100, 1.442505, 0.299184};
     // float ref_x[4];
     // float fdb_x[4];
@@ -132,8 +130,8 @@ Msg_Motor_Fdb_t motor_fdb;
                 ref_x[0] = fdb_x[0] - 0.2f;
             }
 
-            ref_x[2] += control_vector.w;
-            ref_x[3] = 0;
+            ref_x[2] += control_vector.w * 0.001f;
+            ref_x[3] = control_vector.w;
 
             ut[0] = K[0] * (fdb_x[0] - ref_x[0]) + K[1] * (fdb_x[1] - ref_x[1]) +
                     K[2] * (fdb_x[2] - ref_x[2]) + K[3] * (fdb_x[3] - ref_x[3]);
@@ -154,8 +152,6 @@ Msg_Motor_Fdb_t motor_fdb;
             motor_control.torque[0] = 0;
             motor_control.torque[1] = 0;
 
-            filter_control[0].CleanBuf();
-            filter_control[1].CleanBuf();
         }
 
         om_publish(motor_control_topic, &motor_control, sizeof(motor_control), true, false);

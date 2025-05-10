@@ -3,12 +3,14 @@
 #include "tx_api.h"
 #include "core.h"
 #include "arm_math.h"
+#include "Filter.hpp"
 
 TX_THREAD ScheThread;
 uint8_t ScheThreadStack[1024] = {0};
 Msg_Remoter_t remoter;
+Msg_Control_Vector_t control_vector;
 [[noreturn]] void ScheThreadFun(ULONG input) {
-    Msg_Control_Vector_t control_vector;
+
     Msg_Control_Vector_t MAIXCAM_vector;
 
 
@@ -27,8 +29,8 @@ Msg_Remoter_t remoter;
                 control_vector.over_time = true;
             }
             else if (remoter.switch_left==2) {
-                control_vector.vel = remoter.ch_3*2.0f;
-                control_vector.w = -0.01f*remoter.ch_0;
+                control_vector.vel = remoter.ch_3*1.2f;
+                control_vector.w = -remoter.ch_0*3.0f;
                 control_vector.over_time = false;
             }
             else {
@@ -51,6 +53,6 @@ Msg_Remoter_t remoter;
         }
         control_vector.timestamp = tx_time_get();
         om_publish(control_vector_topic, &control_vector, sizeof(control_vector), true, false);
-        tx_thread_sleep(10);
+        tx_thread_sleep(2);
     }
 }
