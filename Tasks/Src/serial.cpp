@@ -34,7 +34,7 @@ uint16_t maixcam_len;
     Msg_Control_Vector_t MAIXCAM_vector={.vel = 0,.w=0};
     om_topic_t *ctl_topic = om_find_topic("MAIXCAM_CTL", UINT32_MAX);
     while (1) {
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart3, uart_rx_buf, sizeof(uart_rx_buf));
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart7, uart_rx_buf, sizeof(uart_rx_buf));
         // 等待串口数据接收完成信号（由中断回调发出）
         if (tx_semaphore_get(&SerialCommSem, 1000) == TX_NO_INSTANCE) {
             MAIXCAM_vector.w = 0;

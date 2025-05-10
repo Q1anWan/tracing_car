@@ -112,7 +112,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     if (huart == &huart5) {
         size_test = Size;
         tx_semaphore_put(&RemoterThreadSem);
-    } else if (huart == &huart3) {
+    } else if (huart == &huart7) {
         // 通知串口处理线程可以解析数据
         maixcam_len = Size;
         tx_semaphore_put(&SerialCommSem);
